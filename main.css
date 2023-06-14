@@ -1,0 +1,42 @@
+html,
+body {
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+  font-family: sans-serif;
+}
+
+h1,
+h3 {
+  line-height: 0;
+}
+h3 {
+  font-weight: lighter;
+  margin-left: 3ch;
+}
+.soroban-logo {
+  width: 9ch;
+}
+#contract-id {
+  min-width: 64ch;
+  width: 90%;
+}
+
+#link {
+  margin-top: 1em;
+  width: 100%;
+  text-align: center;
+}
+
+#link img {
+  vertical-align: middle;
+}
+
+#link a,
+a:visited {
+  font-size: 64px;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid #6450f0;
+  vertical-align: sub;
+}

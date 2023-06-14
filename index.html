@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>getwasm</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" type="text/css" media="screen" href="main.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/soroban-client/0.8.0/soroban-client.js"></script>
+    <script src="getspec.js"></script>
+    <script src="main.js" type="module"></script>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@highlightjs/cdn-assets@11.7.0/styles/default.min.css"
+    />
+  </head>
+  <body>
+    <h1>
+      <img class="soroban-logo" src="soroban.svg" alt="soroban" />
+    </h1>
+    <h3>contract downloader</h3>
+    <form action="javascript:">
+      <input type="text" id="contract-id" placeholder="C... or deadb33f..." />
+      <button type="submit">Get</button>
+    </form>
+    <div id="link"></div>
+    <div id="input"></div>
+    <div id="output-wrapper" style="display: none">
+      <h4>Contract interface</h4>
+      <div id="output"></div>
+    </div>
+  </body>
+</html>
