@@ -44,7 +44,16 @@ function base64ToArrayBuffer(base64) {
   return bytes.buffer;
 }
 
+function getContractDataType(contractCodeLedgerEntryData) {
+  return xdr.LedgerEntryData.fromXDR(
+    contractCodeLedgerEntryData,
+    "base64"
+  )
+    .contractData().val().exec().switch().name
+}
+
 function getLedgerKeyWasmId(contractCodeLedgerEntryData) {
+
   let contractCodeWasmHash = xdr.LedgerEntryData.fromXDR(
     contractCodeLedgerEntryData,
     "base64"
@@ -67,60 +76,96 @@ async function getWasmCodeForContractId(contractId) {
   let server = new SorobanClient.Server(
     "https://rpc-futurenet.stellar.org:443"
   );
-  let contractData = await server.getContractData(
-    hexToBytes(contractId),
-    new xdr.ScVal.scvLedgerKeyContractExecutable()
-  );
-  let wasmId = await getLedgerKeyWasmId(contractData.xdr);
-  let wasmCode = await server.getLedgerEntries([wasmId]);
 
-  let entry = xdr.LedgerEntryData.fromXDR(wasmCode.entries[0].xdr, "base64");
+  try {
 
-  return {
-    hash: entry.contractCode().hash(),
-    code: entry.contractCode().code(),
-    version: wasmCode.entries[0].lastModifiedLedgerSeq,
-  };
+    let contractData = await server.getContractData(
+      hexToBytes(contractId),
+      new xdr.ScVal.scvLedgerKeyContractExecutable()
+    );
+
+    switch (getContractDataType(contractData.xdr)) {
+      case "sccontractExecutableToken":
+        return {
+          hash: undefined,
+          code: undefined,
+          version: undefined,
+        };
+        break;
+      case "sccontractExecutableWasmRef":
+
+        let wasmId = await getLedgerKeyWasmId(contractData.xdr);
+        let wasmCode = await server.getLedgerEntries([wasmId]);
+        let entry = xdr.LedgerEntryData.fromXDR(wasmCode.entries[0].xdr, "base64");
+        console.log(entry)
+        return {
+          hash: entry.contractCode().hash(),
+          code: entry.contractCode().code(),
+          version: wasmCode.entries[0].lastModifiedLedgerSeq,
+        };
+
+        break;
+
+
+      default:
+        
+      throw "Not a contract"
+    }
+
+
+  } catch {
+    throw "Not a contract"
+  } 
 }
 
-document.addEventListener("submit", async () => {
-  let id = document.getElementById("contract-id").value;
-  let cid = id;
-  if (cid.length == 56)
-    cid = SorobanClient.StrKey.decodeContract(cid).toString("hex");
+const queryString = window.location.search;
+const urlParams = new URLSearchParams(queryString);
+
+let id = urlParams.get('id')
+let cid = id;
+if (cid.length == 56)
+  cid = SorobanClient.StrKey.decodeContract(cid).toString("hex");
+
+try {
 
   let wasm = await getWasmCodeForContractId(cid);
   let name = id.substring(0, 6) + ".wasm";
-  //let hash = bytesToHex(wasm.hash);
-  let wasmCode = await bufferToBase64(wasm.code);
+  if (wasm.code != undefined) {
+    let wasmCode = await bufferToBase64(wasm.code);
 
-  document.getElementById(
-    "link"
-  ).innerHTML = `<a href="data:application/octet-stream;base64,${wasmCode}" download="${
-    id + "_" + wasm.version
-  }.wasm"><img src="file-type-wasm.svg" alt="wasm" width="64px"  />${name}</a><br />`;
-  document.getElementById("input").style.display = "none";
-  document.getElementById("input").innerHTML = wasmCode;
-  await wasm_bindgen();
-  wasm_bindgen.getSpec();
-  let source = document.getElementsByTagName("code").item(0).innerHTML;
-  source = source
-    .replace(" , sha256", ",\n  sha256")
-    .replaceAll("pub ", "\npub ")
-    .replaceAll("{", "{\n")
-    .replaceAll("fn ", "\n  fn ")
-    .replaceAll("# ", "\n#")
-    .replaceAll("}", "\n}")
-    .replaceAll(" :: ", "::")
-    .replaceAll(" : ", ": ")
-    .replaceAll(" ! ", "!")
-    .replaceAll(" = ", "=")
-    .replaceAll(" &lt; ", "&lt;")
-    .replaceAll(" &gt; ", "&gt;")
-    .replaceAll("&amp; ", "&amp;");
-  document.getElementsByTagName("code").item(0).innerHTML = source;
-  hljs.registerLanguage("rust", rust);
-  hljs.highlightAll();
+    document.getElementById(
+      "link"
+    ).innerHTML = `<a href="data:application/octet-stream;base64,${wasmCode}" download="${id + "_" + wasm.version}.wasm"><img src="file-type-wasm.svg" alt="wasm" width="64px"  />${name}</a><br />`;
+    document.getElementById("input").style.display = "none";
+    document.getElementById("input").innerHTML = wasmCode;
+    await wasm_bindgen();
+    wasm_bindgen.getSpec();
+    let source = document.getElementsByTagName("code").item(0).innerHTML;
+    source = source
+      .replace(`file = "file.wasm"`, `\n  file="${id + "_" + wasm.version}.wasm"`)
+      .replace(" , sha256", ",\n  sha256")
+      .replaceAll("pub ", "\npub ")
+      .replaceAll("{", "{\n")
+      .replaceAll("fn ", "\n  fn ")
+      .replaceAll("# ", "\n#")
+      .replaceAll("}", "\n}")
+      .replaceAll(" :: ", "::")
+      .replaceAll(" : ", ": ")
+      .replaceAll(" ! ", "!")
+      .replaceAll(" = ", "=")
+      .replaceAll(" &lt; ", "&lt;")
+      .replaceAll(" &gt; ", "&gt;")
+      .replaceAll("&amp; ", "&amp;");
+    document.getElementsByTagName("code").item(0).innerHTML = source;
+    hljs.registerLanguage("rust", rust);
+    hljs.highlightAll();
 
-  document.getElementById("output-wrapper").style.display = "block";
-});
+    document.getElementById("output-wrapper").style.display = "block";
+  } else {
+    document.getElementById("error").innerHTML = `
+        ${id}<br /> 
+        is a wrapped token contract<br />`
+  }
+} catch (e) {
+  document.getElementById("error").innerHTML = e
+}

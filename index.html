@@ -6,7 +6,7 @@
     <title>getwasm</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" type="text/css" media="screen" href="main.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/soroban-client/0.8.0/soroban-client.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/soroban-client/0.8.1/soroban-client.js"></script>
     <script src="getspec.js"></script>
     <script src="main.js" type="module"></script>
     <link
@@ -19,10 +19,11 @@
       <img class="soroban-logo" src="soroban.svg" alt="soroban" />
     </h1>
     <h3>contract downloader</h3>
-    <form action="javascript:">
-      <input type="text" id="contract-id" placeholder="C... or deadb33f..." />
+    <form action="#" method="get">
+      <input type="text" id="contract-id" name="id" placeholder="C... or deadb33f..." />
       <button type="submit">Get</button>
     </form>
+    <div id="error"></div>
     <div id="link"></div>
     <div id="input"></div>
     <div id="output-wrapper" style="display: none">
