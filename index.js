@@ -4,41 +4,86 @@ const xdr = SorobanClient.xdr;
 function getLedgerKeyContractCode(contractId) {
   let ledgerKey = xdr.LedgerKey.contractData(
     new xdr.LedgerKeyContractData({
-      contractId: Buffer.from(contractId, "hex"),
-      key: new xdr.ScVal.scvLedgerKeyContractExecutable(),
+      contract: xdr.ScAddress.scAddressTypeContract(Buffer.from(contractId, "hex")),
+      key: new xdr.ScVal.scvLedgerKeyContractInstance(),
+      durability: xdr.ContractDataDurability.persistent(),
+      bodyType: xdr.ContractEntryBodyType.dataEntry(),
     })
   );
 
   return ledgerKey.toXDR("base64");
 }
 
-console.log(
-  getLedgerKeyContractCode(
-    "af9a2527e3b3b5571d63b0246ba32b7d31a5323766df7c60dfc0b3e3ba6fdf23"
-  )
-);
+let key = getLedgerKeyContractCode(
+  "1148f54b069e04efc986ea107aa5420f90531048e1b237e6ce8268bbe0228cfa"
+)
+// AAAABgAAAAERSPVLBp4E78mG6hB6pUIPkFMQSOGyN+bOgmi74CKM+gAAABQAAAABAAAAAA==
 
-function getLedgerKeyWasmId(contractCodeLedgerEntryData) {
-  let contractCodeWasmHash = xdr.LedgerEntryData.fromXDR(
-    contractCodeLedgerEntryData,
-    "base64"
-  )
-    .contractData()
-    .val()
-    .exec()
-    .wasmId();
+let contractId = 
+"1148f54b069e04efc986ea107aa5420f90531048e1b237e6ce8268bbe0228cfa"
+let srv = new SorobanClient.Server(
+  "https://rpc-futurenet.stellar.org:443")
 
+// srv.getLedgerEntries([xdr.LedgerKey.contractData(
+//   new xdr.LedgerKeyContractData({
+//     contract: xdr.ScAddress.scAddressTypeContract(Buffer.from(contractId, "hex")),
+//     key: new xdr.ScVal.scvLedgerKeyContractInstance(),
+//     durability: xdr.ContractDataDurability.persistent(),
+//     bodyType: xdr.ContractEntryBodyType.dataEntry(),
+//   })
+// )]).then(out => {
+//   console.log(out)
+// })
+
+let c = SorobanClient.StrKey.encodeContract(Buffer.from(contractId, "hex"))
+srv.getContractData(c, new xdr.ScVal.scvLedgerKeyContractInstance()).then(out => {
+  console.log(out)
+  let entry = xdr.LedgerEntryData.fromXDR(out.xdr, 'base64')
+  let instance = new xdr.ScContractInstance({executable: entry.contractData().body().value().val()});
+
+  xdr.ContractExecutable.contractExecutableWasm(instance.executable().value())
   let ledgerKey = xdr.LedgerKey.contractCode(
     new xdr.LedgerKeyContractCode({
-      hash: contractCodeWasmHash,
+      hash: xdr.ContractExecutable.contractExecutableWasm(instance.executable().value()).wasmHash(),
+      bodyType: xdr.ContractEntryBodyType.dataEntry()
     })
   );
 
-  return ledgerKey.toXDR("base64");
-}
+  let a = xdr.ContractExecutable.contractExecutableWasm(instance.executable().value())
+  // let a = instance.executable()
+  
+  console.log(a.wasmHash().toString('hex'))
+  let ledgerKey2 = xdr.LedgerKey.contractCode(
+    new xdr.LedgerKeyContractCode({
+      hash: instance.executable().value(),
+      bodyType: xdr.ContractEntryBodyType.dataEntry()
+    })
+  );
 
-console.log(
-  getLedgerKeyWasmId(
-    "AAAABq+aJSfjs7VXHWOwJGujK30xpTI3Zt98YN/As+O6b98jAAAAFAAAABIAAAAAZBYoEJT3IaPMMk3FoRmnEQHoDxewPZL+Uor+xWI4uII="
-  )
-);
+  console.log(ledgerKey2.toXDR('base64'))
+  })
+  
+// function getLedgerKeyWasmId(contractCodeLedgerEntryData) {
+//   let contractCodeWasmHash = xdr.ContractCodeEntry.fromXDR(
+//     contractCodeLedgerEntryData,
+//     "base64"
+//   )
+//     .contractData()
+//     .val()
+//     .exec()
+//     .wasmId();
+
+//   let ledgerKey = xdr.LedgerKey.contractCode(
+//     new xdr.LedgerKeyContractCode({
+//       hash: contractCodeWasmHash,
+//     })
+//   );
+
+//   return ledgerKey.toXDR("base64");
+// }
+
+// console.log(
+//   getLedgerKeyWasmId(
+//     "AAAABgAAAAERSPVLBp4E78mG6hB6pUIPkFMQSOGyN+bOgmi74CKM+gAAABQAAAABAAAAAAAAAAAAAAATAAAAAC9t++yXzsiyyNSriBZbRQaDsqPyBIX0zJ9M7DoUdcYGAAAAAAAA0Sc="
+//   )
+// );

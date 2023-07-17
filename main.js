@@ -54,20 +54,25 @@ function getContractDataType(contractCodeLedgerEntryData) {
 
 function getLedgerKeyWasmId(contractCodeLedgerEntryData) {
 
-  let contractCodeWasmHash = xdr.LedgerEntryData.fromXDR(
+  let entry = xdr.LedgerEntryData.fromXDR(
     contractCodeLedgerEntryData,
     "base64"
-  )
-    .contractData()
-    .val()
-    .exec()
-    .wasmId();
+  );
+
+  let instance = new xdr.ScContractInstance({ executable: entry.contractData().body().value().val() });
+
+  let exec = xdr.ContractExecutable.contractExecutableWasm(instance.executable())
+
+  let h = exec.wasmHash().instance().executable().wasmHash() // why all this ?
 
   let ledgerKey = xdr.LedgerKey.contractCode(
     new xdr.LedgerKeyContractCode({
-      hash: contractCodeWasmHash,
+      hash: h,
+      bodyType: xdr.ContractEntryBodyType.dataEntry()
     })
   );
+
+
 
   return ledgerKey;
 }
@@ -77,45 +82,47 @@ async function getWasmCodeForContractId(contractId) {
     "https://rpc-futurenet.stellar.org:443"
   );
 
+
   try {
 
     let contractData = await server.getContractData(
-      hexToBytes(contractId),
-      new xdr.ScVal.scvLedgerKeyContractExecutable()
+      SorobanClient.StrKey.encodeContract(hexToBytes(contractId)),
+      new xdr.ScVal.scvLedgerKeyContractInstance()
     );
 
-    switch (getContractDataType(contractData.xdr)) {
-      case "sccontractExecutableToken":
-        return {
-          hash: undefined,
-          code: undefined,
-          version: undefined,
-        };
-        break;
-      case "sccontractExecutableWasmRef":
 
-        let wasmId = await getLedgerKeyWasmId(contractData.xdr);
-        let wasmCode = await server.getLedgerEntries([wasmId]);
-        let entry = xdr.LedgerEntryData.fromXDR(wasmCode.entries[0].xdr, "base64");
-        console.log(entry)
-        return {
-          hash: entry.contractCode().hash(),
-          code: entry.contractCode().code(),
-          version: wasmCode.entries[0].lastModifiedLedgerSeq,
-        };
+    // switch (getContractDataType(contractData.xdr)) {
+    //   case "sccontractExecutableToken":
+    //     return {
+    //       hash: undefined,
+    //       code: undefined,
+    //       version: undefined,
+    //     };
+    //     break;
+    //   case "sccontractExecutableWasmRef":
 
-        break;
+    let wasmId = await getLedgerKeyWasmId(contractData.xdr);
+    let wasmCode = await server.getLedgerEntries([wasmId]);
+    let entry = xdr.LedgerEntryData.fromXDR(wasmCode.entries[0].xdr, "base64");
+    return {
+      hash: entry.contractCode().hash(),
+      code: entry.contractCode().body().code(),
+      version: wasmCode.entries[0].lastModifiedLedgerSeq,
+    };
 
-
-      default:
-        
-      throw "Not a contract"
-    }
+    //     break;
 
 
-  } catch {
+    //   default:
+
+    //   throw "Not a contract"
+    // }
+
+
+  } catch (e) {
+    console.log(e)
     throw "Not a contract"
-  } 
+  }
 }
 
 const queryString = window.location.search;
@@ -131,6 +138,8 @@ try {
   let wasm = await getWasmCodeForContractId(cid);
   let name = id.substring(0, 6) + ".wasm";
   if (wasm.code != undefined) {
+
+    console.log(wasm)
     let wasmCode = await bufferToBase64(wasm.code);
 
     document.getElementById(

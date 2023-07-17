@@ -15,7 +15,7 @@ pub fn getSpec() {
 
     let wasm_bytes = base64::engine::general_purpose::STANDARD.decode(wasm).unwrap();
 
-    match soroban_spec::gen::rust::generate_from_wasm(&wasm_bytes.as_slice(), "file.wasm", None) {
+    match soroban_spec_rust::generate_from_wasm(&wasm_bytes.as_slice(), "file.wasm", None) {
         Ok(s) => {
             let output = format!("<pre><code class=\"hljs language-rust\">{}</code></pre>", s.to_string());
             document
